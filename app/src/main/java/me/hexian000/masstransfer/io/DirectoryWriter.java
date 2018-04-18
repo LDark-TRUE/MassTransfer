@@ -3,6 +3,12 @@ package me.hexian000.masstransfer.io;
 /*
  * DirectoryWriter 是对系统自带的 DocumentFile 的封装
  * 基于系统接口，实现文件夹的流化
+ *
+ * 目录树传输协议基于流式传输实现，无分包概念：
+ * 4B文件名长度 | 8B文件长度 | 文件名 | 文件数据流 | (重复...)
+ * 若文件名长度 = 文件长度 = 0，表示文件传输完毕
+ * 若文件长度 = -1，表示是文件夹
+ * 文件名采用UTF-8编码，包含文件的相对路径，并约定以"/"为路径分隔符
  */
 
 import android.content.ContentResolver;
@@ -23,12 +29,17 @@ public class DirectoryWriter implements Runnable {
 	private ContentResolver resolver;
 	private DocumentFile root;
 	private Reader in;
+	private boolean success = false;
 
 	public DirectoryWriter(ContentResolver resolver, DocumentFile root, Reader in, ProgressReporter reporter) {
 		this.resolver = resolver;
 		this.root = root;
 		this.in = in;
 		this.reporter = reporter;
+	}
+
+	public boolean isSuccess() {
+		return success;
 	}
 
 	private DocumentFile makePath(String[] segments) {
@@ -73,8 +84,9 @@ public class DirectoryWriter implements Runnable {
 			file.delete();
 		}
 		String mime = null;
-		if (name.contains(".")) {
-			mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substring(name.lastIndexOf(".")));
+		int dot = name.lastIndexOf(".");
+		if (dot != -1) {
+			mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substring(dot));
 		}
 		if (mime == null || "null".equals(mime)) {
 			mime = "application/*";
@@ -96,7 +108,7 @@ public class DirectoryWriter implements Runnable {
 				byte[] buffer = new byte[(int) Math.min(length, bufferSize)];
 				int read = in.read(buffer);
 				if (read != buffer.length) {
-					throw new EOFException();
+					throw new EOFException("read=" + read + " buffer=" + buffer.length + " length=" + length);
 				}
 				if (out != null) {
 					out.write(buffer);
@@ -143,10 +155,13 @@ public class DirectoryWriter implements Runnable {
 				String path = new String(name, "UTF-8");
 				writeFile(path, fileLen);
 			} while (true);
+			success = true;
 			reporter.report(null, 0, 0);
 			Log.d(LOG_TAG, "DirectoryWriter finished normally");
 		} catch (InterruptedException e) {
 			Log.d(LOG_TAG, "DirectoryWriter interrupted");
+		} catch (EOFException e) {
+			Log.e(LOG_TAG, "DirectoryWriter early EOF", e);
 		} catch (IOException e) {
 			Log.e(LOG_TAG, "DirectoryWriter", e);
 		}

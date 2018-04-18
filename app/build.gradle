@@ -6,8 +6,8 @@ android {
         applicationId "me.hexian000.masstransfer"
         minSdkVersion 25
         targetSdkVersion 27
-        versionCode 4
-        versionName "2.2"
+        versionCode 5
+        versionName "2.2.1"
     }
     buildTypes {
         release {
@@ -27,6 +27,6 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:27.1.0'
-    implementation 'com.android.support.constraint:constraint-layout:1.0.2'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
 }

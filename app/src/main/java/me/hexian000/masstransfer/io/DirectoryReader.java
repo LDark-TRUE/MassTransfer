@@ -23,6 +23,7 @@ public class DirectoryReader implements Runnable {
 	private DocumentFile root;
 	private String[] files;
 	private Writer out;
+	private boolean success = false;
 
 	public DirectoryReader(ContentResolver resolver, DocumentFile root, String[] files, Writer out, ProgressReporter
 			reporter) {
@@ -31,6 +32,10 @@ public class DirectoryReader implements Runnable {
 		this.files = files;
 		this.out = out;
 		this.reporter = reporter;
+	}
+
+	public boolean isSuccess() {
+		return success;
 	}
 
 	private void sendDir(DocumentFile dir, String basePath) throws IOException, InterruptedException {
@@ -46,8 +51,7 @@ public class DirectoryReader implements Runnable {
 		}
 		byte[] path = pathStr.getBytes("UTF-8");
 		ByteArrayOutputStream header = new ByteArrayOutputStream();
-		ByteBuffer lengths = ByteBuffer.allocate(Integer.BYTES + Long.BYTES).
-				order(ByteOrder.BIG_ENDIAN);
+		ByteBuffer lengths = ByteBuffer.allocate(Integer.BYTES + Long.BYTES).order(ByteOrder.BIG_ENDIAN);
 		lengths.putInt(path.length);
 		Log.d(LOG_TAG, "Now at: " + pathStr);
 		lengths.putLong(-1); // directory
@@ -76,8 +80,7 @@ public class DirectoryReader implements Runnable {
 		}
 		byte[] path = pathStr.getBytes("UTF-8");
 		ByteArrayOutputStream header = new ByteArrayOutputStream();
-		ByteBuffer lengths = ByteBuffer.allocate(Integer.BYTES + Long.BYTES).
-				order(ByteOrder.BIG_ENDIAN);
+		ByteBuffer lengths = ByteBuffer.allocate(Integer.BYTES + Long.BYTES).order(ByteOrder.BIG_ENDIAN);
 		lengths.putInt(path.length);
 		final String name = file.getName();
 		Log.d(LOG_TAG, "sendFile: " + name + " length=" + file.length());
@@ -123,12 +126,12 @@ public class DirectoryReader implements Runnable {
 				}
 			}
 			reporter.report(null, 0, 0);
-			ByteBuffer lengths = ByteBuffer.allocate(Integer.BYTES + Long.BYTES).
-					order(ByteOrder.BIG_ENDIAN);
+			ByteBuffer lengths = ByteBuffer.allocate(Integer.BYTES + Long.BYTES).order(ByteOrder.BIG_ENDIAN);
 			lengths.putInt(0);
 			lengths.putLong(0);
 			out.write(lengths.array()); // bye
 			out.close();
+			success = true;
 			Log.d(LOG_TAG, "DirectoryReader finished normally");
 		} catch (InterruptedException e) {
 			Log.d(LOG_TAG, "DirectoryReader interrupted");
